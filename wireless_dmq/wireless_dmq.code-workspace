@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+     ],
+     "settings": {
+          "files.associations": {
+               "kernel.h": "c",
+               "log.h": "c",
+               "ble_manager.h": "c",
+               "gap.h": "c",
+               "bluetooth.h": "c",
+               "uuid.h": "c"
+          }
+     }
+}
