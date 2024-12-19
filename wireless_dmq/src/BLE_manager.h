@@ -8,7 +8,7 @@
 // ROLE CONFIGURATION ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 #define ROLE_CENTRAL
-#define ROLE_PERIPHERAL
+//#define ROLE_PERIPHERAL
 
 // INCLUDES ------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -17,9 +17,10 @@
 
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/uuid.h>                                    // FRAN BORRAR
+#include <zephyr/bluetooth/addr.h>                                    // Permite administrar las direcciones BLE
 
 #ifdef ROLE_CENTRAL
-
+#include <bluetooth/scan.h>
 #endif
 
 #ifdef ROLE_PERIPHERAL
@@ -44,6 +45,22 @@
 #define DEVICE_NAME           CONFIG_BT_DEVICE_NAME  
 #define ADV_UUID_SERVICE      BT_UUID_NUS_VAL
 #endif
+
+// MACROS ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#define GET_BT_ADDR_STR(origin, addr)                                   \
+        char addr[BT_ADDR_LE_STR_LEN];                                  \
+        bt_addr_le_to_str(origin, addr, sizeof(addr));
+
+enum BLE_manager_state
+{
+     BLE_INIT,
+     BLE_WAITING_CONNECTION
+};
+
+// FUNCTIONS DECLARATION ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+void BLE_manager();
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 

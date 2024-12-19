@@ -5,9 +5,10 @@
 // VARIABLES ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 LOG_MODULE_REGISTER(LOG_BLE,LOG_BLE_LEVEL);			               // Registro del modulo LOG y configuracion del nivel
+static uint8_t manager_state = BLE_INIT;
 
 // TEMPORAL
-uint16_t adv_sensor_id = 6666;
+const uint8_t adv_sensor_id[] = {0x12,0x34,0x56};
 
 // ADVERTISING ------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -41,5 +42,126 @@ void advertising_start()
 }
 
 #endif
+
+// SCANING ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#ifdef ROLE_CENTRAL
+
+static void scan_filter_match( struct bt_scan_device_info *device_info,
+			                struct bt_scan_filter_match *filter_match,
+			                bool connectable )
+{
+     GET_BT_ADDR_STR(device_info->recv_info->addr, addr);
+	LOG_INF("Scan filters matched. Address: %s - Connectable: %d", addr, connectable);
+}
+
+static void scan_filter_no_match(  struct bt_scan_device_info *device_info,
+				               bool connectable)
+{
+     GET_BT_ADDR_STR(device_info->recv_info->addr, addr);
+	LOG_INF("Scan filters no matched. Address: %s - Connectable: %d", addr, connectable);
+}
+
+static void scan_connecting_error(struct bt_scan_device_info *device_info)
+{
+	GET_BT_ADDR_STR(device_info->recv_info->addr, addr);
+	LOG_WRN("Scan connecting failed. Address: %s", addr);
+}
+
+static void scan_connecting(struct bt_scan_device_info *device_info, struct bt_conn *conn)
+{
+	//default_conn = bt_conn_ref(conn);
+	GET_BT_ADDR_STR(bt_conn_get_dst(conn), addr);
+	LOG_INF("Scan successful, connection is started. Address: %s", addr);
+}
+
+struct cb_data scan_cb_data = {
+	.filter_match 		= scan_filter_match,
+	.connecting_error 	= scan_connecting_error,
+	.connecting 		= scan_connecting,
+     .filter_no_match    = scan_filter_no_match
+};
+static struct bt_scan_cb scan_cb = {
+	.cb_addr = &scan_cb_data,	
+};
+
+static int scan_init()
+{
+	int err;
+
+	struct bt_le_scan_param scan_param_init = {
+		.options 	= BT_LE_SCAN_OPT_FILTER_DUPLICATE,								// Evita el procesamiento repetido de paquetes de publicidad provenientes de un mismo periferico. 			
+		.interval = 0x0060,
+		.window 	= 0x0050,
+		.timeout 	= 0,
+	};
+
+	struct bt_scan_init_param scan_init = {
+		.scan_param         = &scan_param_init,
+          .connect_if_match   = 0,													// Configuracion que perimite iniciar una coneccion con los dispositivos que cumplen con el filtro
+	};
+
+	bt_scan_init(&scan_init);														// Inicializamos el modulo scan pero no el scanning
+	
+	bt_scan_cb_register(&scan_cb);													// Registramos las callbacks de scan
+
+	err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_UUID, BT_UUID_NUS_SERVICE);		// Creamos un filtro para el UUID del servicio NUS
+	if (err) {
+		LOG_ERR("Scanning filters cannot be set (err %d)", err);
+		return err;
+	}
+
+	err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_MANUFACTURER_DATA, adv_sensor_id);		// Creamos un filtro para el 
+	if (err) {
+		LOG_ERR("Scanning filters cannot be set (err %d)", err);
+		return err;
+	}
+
+	err = bt_scan_filter_enable(BT_SCAN_ALL_FILTER, true);							// Habilitamos los filtros, BT_SCAN_ALL_FILTER: indicamos que habilitamos todos los filtros. true: Indicamos que deben coincidir todos a la vez 
+	if (err) {
+		LOG_ERR("Filters cannot be turned on (err %d)", err);
+		return err;
+	}
+
+	LOG_INF("Scan module initialized");
+	return err;
+}
+
+#endif
+
+// BLE MACHINE ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+void BLE_manager()
+{
+     uint8_t err;
+     switch (manager_state)
+     {
+          case BLE_INIT:
+               err = bt_enable(NULL);
+               if (err) LOG_ERR("Bluetooth init failed (err %d)", err);
+               
+               #ifdef ROLE_CENTRAL
+               err = scan_init();
+               if (err) LOG_ERR("scan_init failed (err %d)", err);
+
+               err = bt_scan_start(BT_SCAN_TYPE_SCAN_ACTIVE);
+               if (err) LOG_ERR("Scanning failed to start (err %d)", err);
+               #endif
+
+               #ifdef ROLE_PERIPHERAL
+               advertising_start();
+               #endif
+
+               manager_state = BLE_WAITING_CONNECTION;
+
+               break;
+          
+          case BLE_WAITING_CONNECTION:
+               break;
+
+          default:
+               break;
+     }
+}
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------

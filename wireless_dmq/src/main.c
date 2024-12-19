@@ -5,6 +5,8 @@
 #include <zephyr/kernel.h>                                            //
 #include <zephyr/logging/log.h>                                       // Incluye las funciones y macros del modulo LOG
 
+#include "BLE_manager.h"
+
 // DEFINES ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 #define LOG_MAIN_LEVEL 3
@@ -18,7 +20,7 @@ int main(void)
      
      for(;;)
      {
-          
+          BLE_manager();
      }
      return 0;
 }
