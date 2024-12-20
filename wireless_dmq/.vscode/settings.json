@@ -1,0 +1,18 @@
+{
+     "files.associations": {
+          "kernel.h": "c",
+          "log.h": "c",
+          "ble_manager.h": "c",
+          "gap.h": "c",
+          "bluetooth.h": "c",
+          "uuid.h": "c"
+     },
+     "C_Cpp.default.intelliSenseMode": "windows-gcc-arm",
+     "nrf-connect.toolchainManager.installDirectory": "C:\\ncs",
+     "C_Cpp.errorSquiggles": "disabled",
+     "C_Cpp.default.configurationProvider": "nrf-connect",
+     "C_Cpp.default.includePath": [
+          "D:\\PROYECTOS\\nRF_Connect_SDK_v2.7.0\\v2.7.0\\zephyr\\include",
+          "D:\\PROYECTOS\\nRF_Connect_SDK_v2.7.0\\v2.7.0\\nrf\\include"
+     ]
+}
