@@ -8,7 +8,10 @@ LOG_MODULE_REGISTER(LOG_BLE,LOG_BLE_LEVEL);			               // Registro del mod
 static uint8_t manager_state = BLE_INIT;
 
 // TEMPORAL
-const uint8_t adv_sensor_id[] = {0x12,0x34,0x56};
+const uint8_t adv_sensor_id[3] = {0x12,0x34,0x56};
+#ifdef ROLE_CENTRAL
+struct bt_scan_manufacturer_data manufacturer_data; 
+#endif
 
 // ADVERTISING ------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -55,13 +58,6 @@ static void scan_filter_match( struct bt_scan_device_info *device_info,
 	LOG_INF("Scan filters matched. Address: %s - Connectable: %d", addr, connectable);
 }
 
-static void scan_filter_no_match(  struct bt_scan_device_info *device_info,
-				               bool connectable)
-{
-     GET_BT_ADDR_STR(device_info->recv_info->addr, addr);
-	LOG_INF("Scan filters no matched. Address: %s - Connectable: %d", addr, connectable);
-}
-
 static void scan_connecting_error(struct bt_scan_device_info *device_info)
 {
 	GET_BT_ADDR_STR(device_info->recv_info->addr, addr);
@@ -79,7 +75,6 @@ struct cb_data scan_cb_data = {
 	.filter_match 		= scan_filter_match,
 	.connecting_error 	= scan_connecting_error,
 	.connecting 		= scan_connecting,
-     .filter_no_match    = scan_filter_no_match
 };
 static struct bt_scan_cb scan_cb = {
 	.cb_addr = &scan_cb_data,	
@@ -107,13 +102,16 @@ static int scan_init()
 
 	err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_UUID, BT_UUID_NUS_SERVICE);		// Creamos un filtro para el UUID del servicio NUS
 	if (err) {
-		LOG_ERR("Scanning filters cannot be set (err %d)", err);
+		LOG_ERR("Scanning filters UUID cannot be set (err %d)", err);
 		return err;
 	}
 
-	err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_MANUFACTURER_DATA, adv_sensor_id);		// Creamos un filtro para el 
+     manufacturer_data.data = adv_sensor_id;
+     manufacturer_data.data_len = sizeof(adv_sensor_id);
+     LOG_DBG("manufacturer_data_len = %d", manufacturer_data.data_len);
+	err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_MANUFACTURER_DATA, (void*)&manufacturer_data );		// Creamos un filtro para el 
 	if (err) {
-		LOG_ERR("Scanning filters cannot be set (err %d)", err);
+		LOG_ERR("Scanning filters DATA cannot be set (err %d)", err);
 		return err;
 	}
 

@@ -1,8 +1,11 @@
 {
 	"folders": [
-		{
-			"path": "."
-		}
+          {
+               "path": "."
+          },
+          {
+               "path": "../../v2.7.0"
+          }
      ],
      "settings": {
           "files.associations": {
@@ -11,7 +14,8 @@
                "ble_manager.h": "c",
                "gap.h": "c",
                "bluetooth.h": "c",
-               "uuid.h": "c"
+               "uuid.h": "c",
+               "scan.h": "c"
           }
      }
 }
