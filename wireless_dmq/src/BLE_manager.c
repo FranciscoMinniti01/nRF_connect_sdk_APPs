@@ -137,6 +137,8 @@ void BLE_manager()
      switch (manager_state)
      {
           case BLE_INIT:
+               LOG_DBG("BLE manager state init");
+
                err = bt_enable(NULL);
                if (err) LOG_ERR("Bluetooth init failed (err %d)", err);
                
