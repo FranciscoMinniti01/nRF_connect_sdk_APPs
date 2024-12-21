@@ -3,7 +3,7 @@
 
 // ROLE CONFIGURATION ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-//#define BLE_CONF_ROLE_CENTRAL                                         // Habilita el funcionamiento del dispositivo como central
+#define BLE_CONF_ROLE_CENTRAL                                         // Habilita el funcionamiento del dispositivo como central
 #define BLE_CONF_ROLE_PERIPHERAL                                      // Habilita el funcionamiento del dispositivo como periferico
 
 
@@ -58,17 +58,39 @@
 
 // MACROS - DEFINES - ENUM ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-#define GET_BT_ADDR_STR(origin, addr)                                      \
-          char addr[BT_ADDR_LE_STR_LEN];                                   \
-          bt_addr_le_to_str(origin, addr, sizeof(addr));
+/*
+ * @brief Convierte una dirección Bluetooth a una representación de cadena legible.
+ *
+ * Esta macro toma una dirección Bluetooth (estructura `bt_addr_le_t`) y la convierte en un string.
+ * La cadena generada tiene el formato estándar Bluetooth, como `XX:XX:XX:XX:XX:XX (type)`
+ * y se almacena en un buffer local definido automaticamente.
+ *
+ * @param origin Dirección Bluetooth de tipo `bt_addr_le_t` que será convertida.
+ * @param addr Nombre del buffer donde se almacenará la cadena resultante. La macro lo define internamente.
+ */
+#define GET_BT_ADDR_STR(origin, addr)                                 \
+     char addr[BT_ADDR_LE_STR_LEN];                                   \
+     bt_addr_le_to_str(origin, addr, sizeof(addr));
 
-#define IF_BLE_ERROR(err, text, action1, action2, action3)                 \
-          if (err) {                                                       \
-               LOG_ERR(text, err);                                         \
-               action1;                                                    \
-               action2;                                                    \
-               action3;                                                    \
-          }
+/*
+ * Maneja errores BLE con mensajes de log y acciones específicas.
+ *
+ * Esta macro verifica si se produjo un error (err ≠ 0). Si ocurre un error:
+ * - Registra un mensaje de error en el log especificado por `text`.
+ * - Ejecuta una o más acciones definidas en `__VA_ARGS__`.
+ *
+ * @param err Código de error a evaluar.
+ * @param text Mensaje de error que se registrará en el log (debe incluir un marcador %d para mostrar el valor de `err`).
+ * @param ... Acciones opcionales a ejecutar en caso de error. Puede ser una única acción (por ejemplo, `return err`) 
+ *            o varias separadas por punto y coma (`action1; action2`).
+ */
+#define IF_BLE_ERROR(err, text, ...)                                  \
+     do {                                                             \
+          if (err) {                                                  \
+               LOG_ERR(text, err);                                    \
+               do{__VA_ARGS__;} while (0);                            \
+          }                                                           \
+     } while (0);
 
 enum BLE_manager_state
 {
