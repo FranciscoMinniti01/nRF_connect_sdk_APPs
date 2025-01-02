@@ -42,7 +42,7 @@ int advertising_start()
 	if (err == -EALREADY) LOG_ERR("ADV CONTINUA FRAN !!\n");                                  // FRAN Esto nose si es necesario, lo dejo para ver cuando pasa, Tengo que probar con BT_LE_ADV_OPT_ONE_TIME en el adv_param.
 	IF_BLE_ERROR(err, "Advertising failed start. Error: %d\n", return err );
 
-	LOG_INF("Advertising successfully started\n");
+	LOG_INF("Advertising successfully started");
 
      return 0;
 }
@@ -133,13 +133,13 @@ void BLE_manager()
                err = bt_enable(NULL);
                IF_BLE_ERROR(err, "Bluetooth init failed (err %d)", flag_ble_error=true; return);
 
-
                #ifdef BLE_CONF_ROLE_CENTRAL
                err = scan_init();
                IF_BLE_ERROR(err, "scan_init failed (err %d)", flag_ble_error=true)
 
                err = bt_scan_start(BT_SCAN_TYPE_SCAN_ACTIVE);
                IF_BLE_ERROR(err, "Scanning failed to start (err %d)", flag_ble_error=true)
+               LOG_DBG("ADV STAR SACSESSFULI");
                #endif//BLE_CONF_ROLE_CENTRAL
 
                #ifdef BLE_CONF_ROLE_PERIPHERAL
