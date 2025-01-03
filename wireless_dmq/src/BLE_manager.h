@@ -1,7 +1,7 @@
 #ifndef BLE_MANAGER_H
 #define BLE_MANAGER_H
 
-// ROLE CONFIGURATION ------------------------------------------------------------------------------------------------------------------------------------------------------
+// BUILT CONFIGURATION ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 #define BLE_CONF_ROLE_CENTRAL                                         // Habilita el funcionamiento del dispositivo como central
 #define BLE_CONF_ROLE_PERIPHERAL                                      // Habilita el funcionamiento del dispositivo como periferico
@@ -29,7 +29,7 @@
 
 // CONFIGURATION ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-#define BLE_CONF_LOG_LEVEL 4                                                    // Nilvel del LOG 
+#define BLE_CONF_LOG_LEVEL    4                                                 // Nivel del LOG
 
 #define BT_UUID_NUS_VAL 		BT_UUID_128_ENCODE(0x6e400001, 0xb5a3, 0xf393, 0xe0a9, 0xe50e24dcca9e)     // FRAN: TEMPORAL
 #define BT_UUID_NUS_SERVICE   BT_UUID_DECLARE_128(BT_UUID_NUS_VAL)                                       // FRAN: TEMPORAL
@@ -37,7 +37,7 @@
 // ADVERTISING --------------------------------------------------
 #ifdef BLE_CONF_ROLE_PERIPHERAL
 
-#define BLE_CONF_ADV_OPTIONS           BT_LE_ADV_OPT_CONNECTABLE                // Configuracion de la publicidad
+#define BLE_CONF_ADV_OPTIONS           BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_ONE_TIME      //Configuracion de la publicidad
 #define BLE_CONF_ADV_MIN_INTERVAL      BT_GAP_ADV_FAST_INT_MIN_2                // Configuracion del minimo intervalo de publicidad
 #define BLE_CONF_ADV_MAX_INTERVAL      BT_GAP_ADV_FAST_INT_MAX_2                // Configuracion del maximo intervalo de publicidad
 #define BLE_CONF_ADV_ADDR_DIREC        NULL                                     // Configuracion la publicidad dirigida (NULL para desactivar)
@@ -54,12 +54,19 @@
 #define BLE_CONF_SCAN_INTERVAL          0x0060                                  // Configuacion del intervalo de escaneo
 #define BLE_CONF_SCAN_WINDOWS           0x0050                                  // Configuracion de la ventana de escaneo
 #define BLE_CONF_SCAN_UUID_FILTER       BT_UUID_NUS_SERVICE                     // Configuracion del UUID utilizado en el filtro de escaneo
+#define BLE_CONF_SCAN_CONN_AT_MATCH     true                                    // Determina si inicia una coneccion al encontrar un dispositivo o no
+#define BLE_CONF_SCAN_ACTIVE_FILTER     BT_SCAN_ALL_FILTER                      // Configuracion para activar ciertos filtros o todos a la vez
+#define BLE_CONF_SCAN_TYPE_MATCH        true                                    // Determina si tienen que coinicidir todos los filtros activos o si basta con uno
 
 #endif//BLE_CONF_ROLE_CENTRAL
 
 
 // CONNECTION --------------------------------------------------
-#define SECURITY_LEVEL        BT_SECURITY_L0
+#ifdef BLE_CONF_ROLE_CENTRAL
+
+#define BLE_CONF_SECURITY_LEVEL        BT_SECURITY_L0                           // Determina el nivel de seguridad que se va a solicitar como central a un periferico que se conecte
+
+#endif//BLE_CONF_ROLE_CENTRAL
 
 
 // MACROS - STRUCTURES - ENUM ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -94,6 +101,26 @@
      do {                                                             \
           if (err) {                                                  \
                LOG_ERR(text, err);                                    \
+               do{__VA_ARGS__;} while (0);                            \
+          }                                                           \
+     } while (0);
+
+/*
+ * Maneja acciones exitosas BLE con mensajes de log y acciones específicas.
+ *
+ * Esta macro verifica si no se produjo un error (err = 0). Si no ocurre un error:
+ * - Registra un mensaje de informacion en el log, especificado por `text`.
+ * - Ejecuta una o más acciones definidas en `__VA_ARGS__`.
+ *
+ * @param err Código de error a evaluar.
+ * @param text Mensaje que se registrará en el log.
+ * @param ... Acciones opcionales a ejecutar en caso de error. Puede ser una única acción (por ejemplo, `return err`) 
+ *            o varias separadas por punto y coma (`action1; action2`).
+ */
+#define IF_BLE_NO_ERROR(err, text, ...)                               \
+     do {                                                             \
+          if (!err) {                                                 \
+               LOG_INF(text);                                         \
                do{__VA_ARGS__;} while (0);                            \
           }                                                           \
      } while (0);

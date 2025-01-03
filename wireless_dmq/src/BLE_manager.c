@@ -10,11 +10,11 @@ static uint8_t manager_state  = BLE_INIT;                                       
 static bool flag_ble_error    = false;                                          // Bandera global para indicar la precencia de error, en true se reinicia BLE
 
 #ifdef BLE_CONF_ROLE_CENTRAL
-static struct bt_conn *peripheral_conn;
+static struct bt_conn *peripheral_conn;                                         // Instancia de la conneccion como central a un periferico
 #endif//BLE_CONF_ROLE_CENTRAL
 
 #ifdef BLE_CONF_ROLE_PERIPHERAL
-static struct bt_conn *central_conn;
+static struct bt_conn *central_conn;                                            // Instancia de la conneccion como periferico a un central 
 #endif//BLE_CONF_ROLE_PERIPHERAL
 
 // FRAN: TEMPORAL
@@ -35,7 +35,7 @@ static const struct bt_data sd[] = {                                            
      BT_DATA( BT_DATA_MANUFACTURER_DATA, (unsigned char *)&adv_sensor_id, sizeof(adv_sensor_id)),
 };
 
-int advertising_start()
+static int advertising_start()
 {
      int err;
 
@@ -76,7 +76,6 @@ static void scan_connecting_error(struct bt_scan_device_info *device_info)
 
 static void scan_connecting(struct bt_scan_device_info *device_info, struct bt_conn *conn)
 {
-	//default_conn = bt_conn_ref(conn); // FRAN esto si va en la vercion completa
 	GET_BT_ADDR_STR(bt_conn_get_dst(conn), addr);
 	LOG_INF("Scan successful, connection is started. Address: %s", addr);
 }
@@ -101,7 +100,7 @@ static int scan_init()
 
 	struct bt_scan_init_param scan_init = {
 		.scan_param         = &scan_param_init,
-          .connect_if_match   = 0,											// Configuracion que perimite iniciar una coneccion con los dispositivos que cumplen con el filtro
+          .connect_if_match   = BLE_CONF_SCAN_CONN_AT_MATCH,					// Configuracion que perimite iniciar una coneccion con los dispositivos que cumplen con el filtro
 	};
 
 	bt_scan_init(&scan_init);											// Inicializamos el modulo scan (No inicia el escaneo)
@@ -111,18 +110,18 @@ static int scan_init()
 	err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_UUID, BLE_CONF_SCAN_UUID_FILTER);	// Creacion del filtro para el UUID del servicio NUS
 	IF_BLE_ERROR(err, "Scanning filters UUID cannot be set (err %d)", return err);
 
-     static struct bt_scan_manufacturer_data manufacturer_data;                      // Estructura para almacenar la informacion para el filtro
+     static struct bt_scan_manufacturer_data manufacturer_data;                      // Estructura para almacenar la informacion para el filtro de manufacture data
      manufacturer_data.data = adv_sensor_id;                                         
      manufacturer_data.data_len = sizeof(adv_sensor_id);
-	err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_MANUFACTURER_DATA, (void*)&manufacturer_data ); // Creacion del filtro para manufacture data
+	err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_MANUFACTURER_DATA, (void*)&manufacturer_data );   // Creacion del filtro para manufacture data
 	IF_BLE_ERROR(err, "Scanning filters DATA cannot be set (err %d)", return err);
 
-	err = bt_scan_filter_enable(BT_SCAN_ALL_FILTER, true);						// Habilitamos los filtros, BT_SCAN_ALL_FILTER: indicamos que habilitamos todos los filtros. true: Indicamos que deben coincidir todos a la vez 
+	err = bt_scan_filter_enable(BLE_CONF_SCAN_ACTIVE_FILTER, BLE_CONF_SCAN_TYPE_MATCH);			// Habilitamos los filtros
 	IF_BLE_ERROR(err, "Filters cannot be turned on (err %d)", return err);
 
 	LOG_INF("Scan module initialized");
 
-	return err;
+	return 0;
 }
 
 #endif//BLE_CONF_ROLE_CENTRAL
@@ -156,6 +155,7 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
           {
                err = bt_scan_start(BT_SCAN_TYPE_SCAN_ACTIVE);
                IF_BLE_ERROR(err, "Scanning failed to start (Error: %d)", flag_ble_error=true)
+               if(!err) LOG_INF("Scanning start");
           }
           #endif//BLE_CONF_ROLE_CENTRAL
           
@@ -176,7 +176,7 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
      #ifdef BLE_CONF_ROLE_CENTRAL
      if (info.role == BT_CONN_ROLE_CENTRAL)
      {
-          LOG_INF("Connected to the central %s", addr);
+          LOG_INF("Connected to the peripheral %s", addr);
           peripheral_conn = bt_conn_ref(conn);
 
           static struct bt_gatt_exchange_params exchange_params;                     //  Estructura para la negociacion del tamaño del MTU
@@ -184,11 +184,11 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
           err = bt_gatt_exchange_mtu(conn, &exchange_params);                        //  Llama a la negociacion del tamañano del MTU
           IF_BLE_ERROR(err, "MTU exchange failed (Error: %d)")                       //  La MTU se configura en el prj.conf creo // FRAN          
 
-          //err = bt_conn_set_security(conn, SECURITY_LEVEL);
+          //err = bt_conn_set_security(conn, BLE_CONF_SECURITY_LEVEL);
           //IF_BLE_ERROR(err, "Failed to set security level (Error: %d)")//, gatt_discover(conn);Client_BLE_State = CLIENT_BLE_CONNECTED ) //FRAN
 
           err = bt_scan_stop();
-          if(err == EALREADY) LOG_WRN("Scanning was already stopped");
+          if(err == -EALREADY) LOG_WRN("Scanning was already stopped");
           else if(err) LOG_ERR("Stop LE scan failed (Error %d)", err);
      }
      #endif//BLE_CONF_ROLE_CENTRAL
@@ -196,7 +196,7 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
      #ifdef BLE_CONF_ROLE_PERIPHERAL
      if (info.role == BT_CONN_ROLE_PERIPHERAL)
      {
-          LOG_INF("Connected to the peripheral %s", addr);
+          LOG_INF("Connected to the central %s", addr);
           central_conn = bt_conn_ref(conn);
      }
      #endif//BLE_CONF_ROLE_PERIPHERAL
@@ -215,7 +215,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
      #ifdef BLE_CONF_ROLE_CENTRAL
      if (info.role == BT_CONN_ROLE_CENTRAL)
      {
-          LOG_INF("Disconnected to the central %s (Reason %u)", addr, reason);
+          LOG_INF("Disconnected to the peripheral %s (Reason %u)", addr, reason);
           if(peripheral_conn == conn)
           {
                bt_conn_unref(conn);
@@ -223,18 +223,19 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
           }
           else
           { 
-               LOG_ERR("Disconnected from an unassigned central");
+               LOG_ERR("Disconnected from an unassigned peripheral");
                flag_ble_error = true;
           }
           err = bt_scan_start(BT_SCAN_TYPE_SCAN_ACTIVE);
           IF_BLE_ERROR(err, "Scanning failed to start (Error: %d)", flag_ble_error=true)
+          if(!err) LOG_INF("Scanning start");
      }
      #endif//BLE_CONF_ROLE_CENTRAL
 
      #ifdef BLE_CONF_ROLE_PERIPHERAL
      if (info.role == BT_CONN_ROLE_PERIPHERAL)
      {
-          LOG_INF("Disconnected to the peripheral %s (Reason %u)", addr, reason);
+          LOG_INF("Disconnected to the central %s (Reason %u)", addr, reason);
           if(central_conn == conn)
           {
                bt_conn_unref(conn);
@@ -242,7 +243,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
           }
           else
           {
-               LOG_ERR("Disconnected from an unassigned peripheral");
+               LOG_ERR("Disconnected from an unassigned central");
                flag_ble_error = true;
           }
           err = advertising_start();
@@ -294,6 +295,7 @@ void BLE_manager()
 
                err = bt_scan_start(BT_SCAN_TYPE_SCAN_ACTIVE);
                IF_BLE_ERROR(err, "Scanning failed to start (err %d)", flag_ble_error=true)
+               if(!err) LOG_INF("Scanning start");
                #endif//BLE_CONF_ROLE_CENTRAL
 
                #ifdef BLE_CONF_ROLE_PERIPHERAL
