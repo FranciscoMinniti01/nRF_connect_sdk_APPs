@@ -12,9 +12,11 @@
 #include <stdint.h>                                                   // Define los tipos de enteros de tamaño fijo uint8_t, uint16_t, ...    
 #include <zephyr/logging/log.h>                                       // Proporciona las funciones y macros del modulo LOG
 
-#include <zephyr/bluetooth/bluetooth.h>                               // Proporciona las APIs principales para administrar BLE  
-#include <zephyr/bluetooth/uuid.h>                                    // Permite administrar y manipular los UUID // FRAN: Creo que esto es TEMPORAL 
-#include <zephyr/bluetooth/addr.h>                                    // Permite administrar las direcciones BLE
+#include <zephyr/bluetooth/bluetooth.h>                               // Proporciona las APIs principales para administrar BLE
+#include <zephyr/bluetooth/uuid.h>                                    // Permite manipular los UUID // FRAN: Creo que esto es TEMPORAL 
+#include <zephyr/bluetooth/addr.h>                                    // Permite manipular las direcciones BLE
+#include <zephyr/bluetooth/conn.h>                                    // Proporciona las APIs para administrar las conecciones
+#include <zephyr/bluetooth/gatt.h>                                    // Proporciona las APIs para administrar servicios y características GATT y sus parametros
 
 #ifdef BLE_CONF_ROLE_CENTRAL
 #include <bluetooth/scan.h>                                           // Proporciona las APIs para administrar el escaneo BLE como central
@@ -54,6 +56,10 @@
 #define BLE_CONF_SCAN_UUID_FILTER       BT_UUID_NUS_SERVICE                     // Configuracion del UUID utilizado en el filtro de escaneo
 
 #endif//BLE_CONF_ROLE_CENTRAL
+
+
+// CONNECTION --------------------------------------------------
+#define SECURITY_LEVEL        BT_SECURITY_L0
 
 
 // MACROS - STRUCTURES - ENUM ------------------------------------------------------------------------------------------------------------------------------------------------------

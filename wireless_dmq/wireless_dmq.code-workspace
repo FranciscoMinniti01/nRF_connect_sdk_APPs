@@ -15,7 +15,12 @@
                "gap.h": "c",
                "bluetooth.h": "c",
                "uuid.h": "c",
-               "scan.h": "c"
-          }
+               "scan.h": "c",
+               "bt_rpc_gatt_client.h": "c",
+               "bt_rpc_conn_client.h": "c",
+               "gatt.h": "c",
+               "gatt_dm.h": "c"
+          },
+          "nrf-connect.applications": []
      }
 }

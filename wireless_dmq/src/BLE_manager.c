@@ -9,6 +9,14 @@ LOG_MODULE_REGISTER(LOG_BLE,BLE_CONF_LOG_LEVEL);                                
 static uint8_t manager_state  = BLE_INIT;                                       // Estado del administrador del BLE
 static bool flag_ble_error    = false;                                          // Bandera global para indicar la precencia de error, en true se reinicia BLE
 
+#ifdef BLE_CONF_ROLE_CENTRAL
+static struct bt_conn *peripheral_conn;
+#endif//BLE_CONF_ROLE_CENTRAL
+
+#ifdef BLE_CONF_ROLE_PERIPHERAL
+static struct bt_conn *central_conn;
+#endif//BLE_CONF_ROLE_PERIPHERAL
+
 // FRAN: TEMPORAL
 static uint8_t adv_sensor_id[3] = {0x12,0x34,0x56};                              // FRAN: TEMPORAL
 
@@ -39,8 +47,8 @@ int advertising_start()
                                                           BLE_CONF_ADV_ADDR_DIREC);
 
 	err = bt_le_adv_start(adv_param, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));	               // Inicio de la publicidad
-	if (err == -EALREADY) LOG_ERR("ADV CONTINUA FRAN !!\n");                                  // FRAN Esto nose si es necesario, lo dejo para ver cuando pasa, Tengo que probar con BT_LE_ADV_OPT_ONE_TIME en el adv_param.
-	IF_BLE_ERROR(err, "Advertising failed start. Error: %d\n", return err );
+	if (err == -EALREADY) LOG_WRN("Advertising continuous");
+	IF_BLE_ERROR(err, "Advertising failed start. Error: %d", return err );
 
 	LOG_INF("Advertising successfully started");
 
@@ -120,6 +128,153 @@ static int scan_init()
 #endif//BLE_CONF_ROLE_CENTRAL
 
 
+// CONNECTION ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#ifdef BLE_CONF_ROLE_CENTRAL
+static void mtu_exchange_cb(struct bt_conn *conn, uint8_t err, struct bt_gatt_exchange_params *params)
+{
+	if (!err) LOG_INF("MTU exchange done");
+	else LOG_WRN("MTU exchange failed (Error: %" PRIu8 ")", err);
+}
+#endif//BLE_CONF_ROLE_CENTRAL
+
+static void connected(struct bt_conn *conn, uint8_t conn_err)
+{
+     int err;
+     struct bt_conn_info info;
+
+     GET_BT_ADDR_STR(bt_conn_get_dst(conn), addr);
+
+     LOG_DBG("connected()");
+
+	if(conn_err)
+	{
+		LOG_ERR("Failed to connect to %s (Error: %d)", addr, conn_err);
+          
+          #ifdef BLE_CONF_ROLE_CENTRAL
+          if(peripheral_conn == NULL)
+          {
+               err = bt_scan_start(BT_SCAN_TYPE_SCAN_ACTIVE);
+               IF_BLE_ERROR(err, "Scanning failed to start (Error: %d)", flag_ble_error=true)
+          }
+          #endif//BLE_CONF_ROLE_CENTRAL
+          
+          #ifdef BLE_CONF_ROLE_PERIPHERAL
+          if(central_conn == NULL)
+          {
+               err = advertising_start();
+               IF_BLE_ERROR(err, "Advertising failed to start (err %d)", flag_ble_error=true)
+          }
+          #endif//BLE_CONF_ROLE_PERIPHERAL
+		
+          return;
+	}
+	
+     err = bt_conn_get_info(conn, &info);
+     IF_BLE_ERROR(err, "get conn info failed (Error: %d)")
+     
+     #ifdef BLE_CONF_ROLE_CENTRAL
+     if (info.role == BT_CONN_ROLE_CENTRAL)
+     {
+          LOG_INF("Connected to the central %s", addr);
+          peripheral_conn = bt_conn_ref(conn);
+
+          static struct bt_gatt_exchange_params exchange_params;                     //  Estructura para la negociacion del tamaño del MTU
+          exchange_params.func = mtu_exchange_cb;                                    //  Callback para notificar la finalizacion de la notificacion de la MTU
+          err = bt_gatt_exchange_mtu(conn, &exchange_params);                        //  Llama a la negociacion del tamañano del MTU
+          IF_BLE_ERROR(err, "MTU exchange failed (Error: %d)")                       //  La MTU se configura en el prj.conf creo // FRAN          
+
+          //err = bt_conn_set_security(conn, SECURITY_LEVEL);
+          //IF_BLE_ERROR(err, "Failed to set security level (Error: %d)")//, gatt_discover(conn);Client_BLE_State = CLIENT_BLE_CONNECTED ) //FRAN
+
+          err = bt_scan_stop();
+          if(err == EALREADY) LOG_WRN("Scanning was already stopped");
+          else if(err) LOG_ERR("Stop LE scan failed (Error %d)", err);
+     }
+     #endif//BLE_CONF_ROLE_CENTRAL
+
+     #ifdef BLE_CONF_ROLE_PERIPHERAL
+     if (info.role == BT_CONN_ROLE_PERIPHERAL)
+     {
+          LOG_INF("Connected to the peripheral %s", addr);
+          central_conn = bt_conn_ref(conn);
+     }
+     #endif//BLE_CONF_ROLE_PERIPHERAL
+}
+
+static void disconnected(struct bt_conn *conn, uint8_t reason)
+{
+     int err;
+     struct bt_conn_info info;
+
+	GET_BT_ADDR_STR(bt_conn_get_dst(conn), addr);
+
+     err = bt_conn_get_info(conn, &info);
+     IF_BLE_ERROR(err, "get conn info failed (Error: %d)")
+
+     #ifdef BLE_CONF_ROLE_CENTRAL
+     if (info.role == BT_CONN_ROLE_CENTRAL)
+     {
+          LOG_INF("Disconnected to the central %s (Reason %u)", addr, reason);
+          if(peripheral_conn == conn)
+          {
+               bt_conn_unref(conn);
+               peripheral_conn = NULL;
+          }
+          else
+          { 
+               LOG_ERR("Disconnected from an unassigned central");
+               flag_ble_error = true;
+          }
+          err = bt_scan_start(BT_SCAN_TYPE_SCAN_ACTIVE);
+          IF_BLE_ERROR(err, "Scanning failed to start (Error: %d)", flag_ble_error=true)
+     }
+     #endif//BLE_CONF_ROLE_CENTRAL
+
+     #ifdef BLE_CONF_ROLE_PERIPHERAL
+     if (info.role == BT_CONN_ROLE_PERIPHERAL)
+     {
+          LOG_INF("Disconnected to the peripheral %s (Reason %u)", addr, reason);
+          if(central_conn == conn)
+          {
+               bt_conn_unref(conn);
+               central_conn = NULL;
+          }
+          else
+          {
+               LOG_ERR("Disconnected from an unassigned peripheral");
+               flag_ble_error = true;
+          }
+          err = advertising_start();
+          IF_BLE_ERROR(err, "Advertising failed to start (err %d)", flag_ble_error=true)
+     }
+     #endif//BLE_CONF_ROLE_PERIPHERAL
+}
+
+/*static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_security_err err)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+	if (!err) {
+		LOG_INF("Security changed: %s level %u", addr, level);
+	} else {
+		LOG_WRN("Security failed: %s level %u err %d", addr,
+			level, err);
+	}
+
+	gatt_discover(conn);
+	Client_BLE_State = CLIENT_BLE_CONNECTED;
+}*/
+
+BT_CONN_CB_DEFINE(conn_callbacks) = {
+	.connected = connected,
+	.disconnected = disconnected
+	//.security_changed = security_changed
+};
+
+
 // BLE MACHINE ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 void BLE_manager()
@@ -139,7 +294,6 @@ void BLE_manager()
 
                err = bt_scan_start(BT_SCAN_TYPE_SCAN_ACTIVE);
                IF_BLE_ERROR(err, "Scanning failed to start (err %d)", flag_ble_error=true)
-               LOG_DBG("ADV STAR SACSESSFULI");
                #endif//BLE_CONF_ROLE_CENTRAL
 
                #ifdef BLE_CONF_ROLE_PERIPHERAL
