@@ -6,6 +6,8 @@
 #define BLE_CONF_ROLE_CENTRAL                                         // Habilita el funcionamiento del dispositivo como central
 #define BLE_CONF_ROLE_PERIPHERAL                                      // Habilita el funcionamiento del dispositivo como periferico
 
+#define BLE_CONF_ENABLE_CONN_PARAM                                    // Habilita la configuracion de los parametros de coneccion por parte del periferico
+
 
 // INCLUDES ------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -62,11 +64,20 @@
 
 
 // CONNECTION --------------------------------------------------
-#ifdef BLE_CONF_ROLE_CENTRAL
+#define BLE_CONF_SECURITY_LEVEL         BT_SECURITY_L0                          // Determina el nivel de seguridad que se va a solicitar como central a un periferico que se conecte
 
-#define BLE_CONF_SECURITY_LEVEL        BT_SECURITY_L0                           // Determina el nivel de seguridad que se va a solicitar como central a un periferico que se conecte
-
-#endif//BLE_CONF_ROLE_CENTRAL
+#ifdef BLE_CONF_ENABLE_CONN_PARAM
+#define BLE_CONF_CONN_MIN_INTERVAL      30                                      // Configuracion de intervalo minimo de coneccion que como periferico se solicita a una central
+#define BLE_CONF_CONN_MAX_INTERVAL      50                                      // Configuracion de intervalo maximo de coneccion que como periferico se solicita a una central
+#define BLE_CONF_CONN_LATENCY           5                                       // Configuracion de la latencia de coneccion que como periferico se solicita a una central
+#define BLE_CONF_CONN_TIMEOUT           1000                                    // Configuracion del timeout de coneccion que como periferico se solicita a una central (Tiene un valor minimo)
+#define CONN_MIN_TIMEOUT                (((1+BLE_CONF_CONN_LATENCY)*BLE_CONF_CONN_MAX_INTERVAL)/4)+1       // Valor minimo que puede tomar el timeout de una coneccion
+#if BLE_CONF_CONN_TIMEOUT < CONN_MIN_TIMEOUT
+#define FINAL_TIMEOUT CONN_MIN_TIMEOUT
+#else
+#define FINAL_TIMEOUT BLE_CONF_CONN_TIMEOUT
+#endif
+#endif//BLE_CONF_ENABLE_CONN_PARAM
 
 
 // MACROS - STRUCTURES - ENUM ------------------------------------------------------------------------------------------------------------------------------------------------------

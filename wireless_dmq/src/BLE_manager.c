@@ -198,8 +198,20 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
      {
           LOG_INF("Connected to the central %s", addr);
           central_conn = bt_conn_ref(conn);
+
+          #ifdef BLE_CONF_ENABLE_CONN_PARAM
+          static struct bt_le_conn_param conn_param = {
+               .interval_min  = BLE_CONF_CONN_MIN_INTERVAL/1.25,
+               .interval_max  = BLE_CONF_CONN_MAX_INTERVAL/1.25,
+               .latency       = BLE_CONF_CONN_LATENCY,
+               .timeout       = FINAL_TIMEOUT/10,
+          };
+          bt_conn_le_param_update(conn,&conn_param);
+          #endif//BLE_CONF_ENABLE_CONN_PARAM
      }
      #endif//BLE_CONF_ROLE_PERIPHERAL
+
+     LOG_DBG("Connection parameters:         interval %.2f ms - latency %d - timeout %d ms", info.le.interval*1.25, info.le.latency, info.le.timeout*10);
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
@@ -252,6 +264,18 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
      #endif//BLE_CONF_ROLE_PERIPHERAL
 }
 
+static void le_param_updated(struct bt_conn *conn, uint16_t interval, uint16_t latency, uint16_t timeout)
+{
+     LOG_INF("Connection parameters updated: interval %.2f ms - latency %d - timeout %d ms", interval*1.25, latency, timeout*10);
+}
+
+static bool le_param_request(struct bt_conn *conn, struct bt_le_conn_param *param)
+{
+     LOG_INF( "Connection parameters request: interval min %.2f ms - interval max %.2f ms - latency %d - timeout %d ms", 
+              (param->interval_min)*1.25, (param->interval_max)*1.25, param->latency, (param->timeout)*10);
+     return true;
+}
+
 /*static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_security_err err)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
@@ -270,8 +294,10 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 }*/
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
-	.connected = connected,
-	.disconnected = disconnected
+	.connected          = connected,
+	.disconnected       = disconnected,
+     .le_param_updated   = le_param_updated,
+     .le_param_req       = le_param_request,
 	//.security_changed = security_changed
 };
 
