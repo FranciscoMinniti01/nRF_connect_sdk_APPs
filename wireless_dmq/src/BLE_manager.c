@@ -39,8 +39,6 @@ static int advertising_start()
 {
      int err;
 
-     LOG_DBG("advertising_start()");
-
 	struct bt_le_adv_param *adv_param = BT_LE_ADV_PARAM( BLE_CONF_ADV_OPTIONS,
                                                           BLE_CONF_ADV_MIN_INTERVAL,
                                                           BLE_CONF_ADV_MAX_INTERVAL,
@@ -89,8 +87,6 @@ static int scan_init()
 {
 	int err;
 
-     LOG_DBG("scan_init()");
-
 	struct bt_le_scan_param scan_param_init = {                                     // Estructura de configuracion del escaneo
 		.options 	= BLE_CONF_SCAN_OPTIONS, 			
 		.interval = BLE_CONF_SCAN_INTERVAL,
@@ -132,7 +128,7 @@ static int scan_init()
 #ifdef BLE_CONF_ROLE_CENTRAL
 static void mtu_exchange_cb(struct bt_conn *conn, uint8_t err, struct bt_gatt_exchange_params *params)
 {
-	if (!err) LOG_INF("MTU exchange done");
+	if (!err) LOG_INF("MTU exchange done: %d bytes",bt_gatt_get_mtu(conn));
 	else LOG_WRN("MTU exchange failed (Error: %" PRIu8 ")", err);
 }
 #endif//BLE_CONF_ROLE_CENTRAL
@@ -143,8 +139,6 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
      struct bt_conn_info info;
 
      GET_BT_ADDR_STR(bt_conn_get_dst(conn), addr);
-
-     LOG_DBG("connected()");
 
 	if(conn_err)
 	{
@@ -182,7 +176,7 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
           static struct bt_gatt_exchange_params exchange_params;                     //  Estructura para la negociacion del tamaño del MTU
           exchange_params.func = mtu_exchange_cb;                                    //  Callback para notificar la finalizacion de la notificacion de la MTU
           err = bt_gatt_exchange_mtu(conn, &exchange_params);                        //  Llama a la negociacion del tamañano del MTU
-          IF_BLE_ERROR(err, "MTU exchange failed (Error: %d)")                       //  La MTU se configura en el prj.conf creo // FRAN          
+          IF_BLE_ERROR(err, "MTU exchange failed (Error: %d)")                       //  La MTU se configura en el prj.conf CONFIG_BT_L2CAP_TX_MTU          
 
           //err = bt_conn_set_security(conn, BLE_CONF_SECURITY_LEVEL);
           //IF_BLE_ERROR(err, "Failed to set security level (Error: %d)")//, gatt_discover(conn);Client_BLE_State = CLIENT_BLE_CONNECTED ) //FRAN
@@ -208,10 +202,20 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
           };
           bt_conn_le_param_update(conn,&conn_param);
           #endif//BLE_CONF_ENABLE_CONN_PARAM
+
+          err = bt_le_adv_stop();
+          if(err == -EALREADY) LOG_WRN("Advertising was already stopped");
+          else if(err) LOG_ERR("Stop advertising failed (Error %d)", err);
+
      }
      #endif//BLE_CONF_ROLE_PERIPHERAL
 
-     LOG_DBG("Connection parameters:         interval %.2f ms - latency %d - timeout %d ms", info.le.interval*1.25, info.le.latency, info.le.timeout*10);
+     if (info.role == BT_CONN_ROLE_PERIPHERAL) LOG_DBG("Role peripheral:");
+     if (info.role == BT_CONN_ROLE_CENTRAL)    LOG_DBG("Role central:");
+     LOG_DBG("     Connection parameters:   interval %.2f ms - latency %d - timeout %d ms", info.le.interval*1.25, info.le.latency, info.le.timeout*10);
+
+     LOG_DBG("     PHY RX: %dM - PHY TX: %dM",info.le.phy->rx_phy ,info.le.phy->tx_phy);
+     LOG_DBG("     Length tx:%d bytes - rx:%d bytes, time tx:%d us - rx:%d us", info.le.data_len->tx_max_len, info.le.data_len->rx_max_len, info.le.data_len->tx_max_time, info.le.data_len->rx_max_time);
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
@@ -264,16 +268,62 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
      #endif//BLE_CONF_ROLE_PERIPHERAL
 }
 
-static void le_param_updated(struct bt_conn *conn, uint16_t interval, uint16_t latency, uint16_t timeout)
-{
-     LOG_INF("Connection parameters updated: interval %.2f ms - latency %d - timeout %d ms", interval*1.25, latency, timeout*10);
-}
-
 static bool le_param_request(struct bt_conn *conn, struct bt_le_conn_param *param)
 {
-     LOG_INF( "Connection parameters request: interval min %.2f ms - interval max %.2f ms - latency %d - timeout %d ms", 
+     int err;
+     struct bt_conn_info info;
+     err = bt_conn_get_info(conn, &info);
+     IF_BLE_ERROR(err, "get conn info failed (Error: %d)")
+     if (info.role == BT_CONN_ROLE_PERIPHERAL) LOG_INF("Role peripheral, Connection parameters request:");
+     if (info.role == BT_CONN_ROLE_CENTRAL) LOG_INF("Role central, Connection parameters request:");
+
+     LOG_INF( "     Interval MIN %.2f ms - Interval MAX %.2f ms - Latency %d - Timeout %d ms", 
               (param->interval_min)*1.25, (param->interval_max)*1.25, param->latency, (param->timeout)*10);
      return true;
+}
+
+static void le_param_updated(struct bt_conn *conn, uint16_t interval, uint16_t latency, uint16_t timeout)
+{
+     int err;
+     struct bt_conn_info info;
+     err = bt_conn_get_info(conn, &info);
+     IF_BLE_ERROR(err, "get conn info failed (Error: %d)")
+     if (info.role == BT_CONN_ROLE_PERIPHERAL) LOG_INF("Role peripheral, Connection parameters updated:");
+     if (info.role == BT_CONN_ROLE_CENTRAL) LOG_INF("Role central, Connection parameters updated:");
+     LOG_INF("     Interval %.2f ms - Latency %d - Timeout %d ms", interval*1.25, latency, timeout*10);
+}
+
+static void on_le_phy_updated(struct bt_conn *conn, struct bt_conn_le_phy_info *param)
+{
+     int err;
+     struct bt_conn_info info;
+     err = bt_conn_get_info(conn, &info);
+     IF_BLE_ERROR(err, "get conn info failed (Error: %d)")
+     if (info.role == BT_CONN_ROLE_PERIPHERAL) LOG_INF("Role peripheral, PHY updated:");
+     if (info.role == BT_CONN_ROLE_CENTRAL) LOG_INF("Role central, PHY updated:");
+
+     if (param->tx_phy == BT_CONN_LE_TX_POWER_PHY_1M) {
+          LOG_INF("     New PHY: 1M");
+     }
+     else if (param->tx_phy == BT_CONN_LE_TX_POWER_PHY_2M) {
+          LOG_INF("     New PHY: 2M");
+     }
+     else if (param->tx_phy == BT_CONN_LE_TX_POWER_PHY_CODED_S8) {
+          LOG_INF("     New PHY: Long Range");
+     }
+     else LOG_INF("     New PHY don't detected");
+}
+
+static void on_le_data_len_updated(struct bt_conn *conn, struct bt_conn_le_data_len_info *info)
+{
+     int err;
+     struct bt_conn_info inf;
+     err = bt_conn_get_info(conn, &inf);
+     IF_BLE_ERROR(err, "get conn info failed (Error: %d)")
+     if (inf.role == BT_CONN_ROLE_PERIPHERAL) LOG_INF("Role peripheral, Data length updated:");
+     if (inf.role == BT_CONN_ROLE_CENTRAL) LOG_INF("Role central, Data length updated:");
+
+     LOG_INF("     Length tx:%d bytes - rx:%d bytes, time tx:%d us - rx:%d us", info->tx_max_len, info->rx_max_len, info->tx_max_time, info->rx_max_time);
 }
 
 /*static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_security_err err)
@@ -294,11 +344,13 @@ static bool le_param_request(struct bt_conn *conn, struct bt_le_conn_param *para
 }*/
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
-	.connected          = connected,
-	.disconnected       = disconnected,
-     .le_param_updated   = le_param_updated,
-     .le_param_req       = le_param_request,
-	//.security_changed = security_changed
+	.connected               = connected,
+	.disconnected            = disconnected,
+     .le_param_req            = le_param_request,
+     .le_param_updated        = le_param_updated,
+     .le_phy_updated          = on_le_phy_updated,
+     .le_data_len_updated     = on_le_data_len_updated,
+	//.security_changed      = security_changed
 };
 
 
@@ -310,8 +362,6 @@ void BLE_manager()
      switch (manager_state)
      {
           case BLE_INIT:
-               LOG_DBG("BLE manager state init");
-               
                err = bt_enable(NULL);
                IF_BLE_ERROR(err, "Bluetooth init failed (err %d)", flag_ble_error=true; return);
 
