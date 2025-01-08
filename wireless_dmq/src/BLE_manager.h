@@ -3,7 +3,7 @@
 
 // BUILT CONFIGURATION ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-#define BLE_CONF_ROLE_CENTRAL                                         // Habilita el funcionamiento del dispositivo como central
+//#define BLE_CONF_ROLE_CENTRAL                                         // Habilita el funcionamiento del dispositivo como central
 #define BLE_CONF_ROLE_PERIPHERAL                                      // Habilita el funcionamiento del dispositivo como periferico
 
 #define BLE_CONF_ENABLE_CONN_PARAM                                    // Habilita la configuracion de los parametros de coneccion por parte del periferico
@@ -64,7 +64,7 @@
 
 
 // CONNECTION --------------------------------------------------
-#define BLE_CONF_SECURITY_LEVEL         BT_SECURITY_L0                          // Determina el nivel de seguridad que se va a solicitar como central a un periferico que se conecte
+#define BLE_CONF_SECURITY_LEVEL         BT_SECURITY_L3                          // Determina el nivel de seguridad que se va a solicitar como central a un periferico que se conecte
 
 #ifdef BLE_CONF_ENABLE_CONN_PARAM
 #define BLE_CONF_CONN_MIN_INTERVAL      30                                      // Configuracion de intervalo minimo de coneccion que como periferico se solicita a una central
@@ -78,6 +78,9 @@
 #define FINAL_TIMEOUT BLE_CONF_CONN_TIMEOUT
 #endif
 #endif//BLE_CONF_ENABLE_CONN_PARAM
+
+// SECURITY --------------------------------------------------
+#define BLE_CONF_PASSKEY      123456
 
 
 // MACROS - STRUCTURES - ENUM ------------------------------------------------------------------------------------------------------------------------------------------------------

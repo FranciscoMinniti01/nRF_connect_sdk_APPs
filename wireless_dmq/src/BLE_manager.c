@@ -20,7 +20,6 @@ static struct bt_conn *central_conn;                                            
 // FRAN: TEMPORAL
 static uint8_t adv_sensor_id[3] = {0x12,0x34,0x56};                              // FRAN: TEMPORAL
 
-
 // ADVERTISING ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 #ifdef BLE_CONF_ROLE_PERIPHERAL
@@ -171,19 +170,19 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
      if (info.role == BT_CONN_ROLE_CENTRAL)
      {
           LOG_INF("Connected to the peripheral %s", addr);
-          peripheral_conn = bt_conn_ref(conn);
+          peripheral_conn = bt_conn_ref(conn);      
+
+          err = bt_conn_set_security(conn, BLE_CONF_SECURITY_LEVEL);
+          IF_BLE_ERROR(err, "Failed to set security level (Error: %d)")
+
+          err = bt_scan_stop();
+          if(err == -EALREADY);//LOG_WRN("Scanning was already stopped");
+          else if(err) LOG_ERR("Stop LE scan failed (Error %d)", err);
 
           static struct bt_gatt_exchange_params exchange_params;                     //  Estructura para la negociacion del tamaño del MTU
           exchange_params.func = mtu_exchange_cb;                                    //  Callback para notificar la finalizacion de la notificacion de la MTU
           err = bt_gatt_exchange_mtu(conn, &exchange_params);                        //  Llama a la negociacion del tamañano del MTU
-          IF_BLE_ERROR(err, "MTU exchange failed (Error: %d)")                       //  La MTU se configura en el prj.conf CONFIG_BT_L2CAP_TX_MTU          
-
-          //err = bt_conn_set_security(conn, BLE_CONF_SECURITY_LEVEL);
-          //IF_BLE_ERROR(err, "Failed to set security level (Error: %d)")//, gatt_discover(conn);Client_BLE_State = CLIENT_BLE_CONNECTED ) //FRAN
-
-          err = bt_scan_stop();
-          if(err == -EALREADY) LOG_WRN("Scanning was already stopped");
-          else if(err) LOG_ERR("Stop LE scan failed (Error %d)", err);
+          IF_BLE_ERROR(err, "MTU exchange failed (Error: %d)")                       //  La MTU se configura en el prj.conf CONFIG_BT_L2CAP_TX_MTU    
      }
      #endif//BLE_CONF_ROLE_CENTRAL
 
@@ -193,7 +192,17 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
           LOG_INF("Connected to the central %s", addr);
           central_conn = bt_conn_ref(conn);
 
-          #ifdef BLE_CONF_ENABLE_CONN_PARAM
+          err = bt_passkey_set(BLE_CONF_PASSKEY);
+          IF_BLE_ERROR(err, "Set passkey failed (Error: %d)") 
+
+          /*err = bt_conn_set_security(conn, BLE_CONF_SECURITY_LEVEL);
+          IF_BLE_ERROR(err, "Failed to set security level (Error: %d)")*/
+
+          /*err = bt_le_adv_stop();
+          if(err == -EALREADY) LOG_WRN("Advertising was already stopped");
+          else if(err) LOG_ERR("Stop advertising failed (Error %d)", err);*/
+
+          /*#ifdef BLE_CONF_ENABLE_CONN_PARAM
           static struct bt_le_conn_param conn_param = {
                .interval_min  = BLE_CONF_CONN_MIN_INTERVAL/1.25,
                .interval_max  = BLE_CONF_CONN_MAX_INTERVAL/1.25,
@@ -201,21 +210,17 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
                .timeout       = FINAL_TIMEOUT/10,
           };
           bt_conn_le_param_update(conn,&conn_param);
-          #endif//BLE_CONF_ENABLE_CONN_PARAM
-
-          err = bt_le_adv_stop();
-          if(err == -EALREADY) LOG_WRN("Advertising was already stopped");
-          else if(err) LOG_ERR("Stop advertising failed (Error %d)", err);
-
+          #endif//BLE_CONF_ENABLE_CONN_PARAM*/
      }
      #endif//BLE_CONF_ROLE_PERIPHERAL
 
-     if (info.role == BT_CONN_ROLE_PERIPHERAL) LOG_DBG("Role peripheral:");
+     /*if (info.role == BT_CONN_ROLE_PERIPHERAL) LOG_DBG("Role peripheral:");
      if (info.role == BT_CONN_ROLE_CENTRAL)    LOG_DBG("Role central:");
      LOG_DBG("     Connection parameters:   interval %.2f ms - latency %d - timeout %d ms", info.le.interval*1.25, info.le.latency, info.le.timeout*10);
 
      LOG_DBG("     PHY RX: %dM - PHY TX: %dM",info.le.phy->rx_phy ,info.le.phy->tx_phy);
      LOG_DBG("     Length tx:%d bytes - rx:%d bytes, time tx:%d us - rx:%d us", info.le.data_len->tx_max_len, info.le.data_len->rx_max_len, info.le.data_len->tx_max_time, info.le.data_len->rx_max_time);
+     LOG_DBG("     Security level %d",info.security.level);*/
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
@@ -267,7 +272,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
      }
      #endif//BLE_CONF_ROLE_PERIPHERAL
 }
-
+/*
 static bool le_param_request(struct bt_conn *conn, struct bt_le_conn_param *param)
 {
      int err;
@@ -325,32 +330,84 @@ static void on_le_data_len_updated(struct bt_conn *conn, struct bt_conn_le_data_
 
      LOG_INF("     Length tx:%d bytes - rx:%d bytes, time tx:%d us - rx:%d us", info->tx_max_len, info->rx_max_len, info->tx_max_time, info->rx_max_time);
 }
-
-/*static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_security_err err)
+*/
+static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_security_err err)
 {
-	char addr[BT_ADDR_LE_STR_LEN];
+	GET_BT_ADDR_STR(bt_conn_get_dst(conn), addr);
 
-	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
-
-	if (!err) {
-		LOG_INF("Security changed: %s level %u", addr, level);
-	} else {
-		LOG_WRN("Security failed: %s level %u err %d", addr,
-			level, err);
-	}
-
-	gatt_discover(conn);
-	Client_BLE_State = CLIENT_BLE_CONNECTED;
-}*/
+	if (!err) LOG_INF("Security changed: %s level %u", addr, level);
+	else LOG_WRN("Security changed failed: %s level %u err %d", addr, level, err);
+}
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.connected               = connected,
 	.disconnected            = disconnected,
-     .le_param_req            = le_param_request,
+     /*.le_param_req            = le_param_request,
      .le_param_updated        = le_param_updated,
      .le_phy_updated          = on_le_phy_updated,
-     .le_data_len_updated     = on_le_data_len_updated,
-	//.security_changed      = security_changed
+     .le_data_len_updated     = on_le_data_len_updated,*/
+	.security_changed        = security_changed,
+};
+
+
+// AUTHENTUCATION AND PAIRING ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+static void auth_cancel(struct bt_conn *conn)
+{
+	GET_BT_ADDR_STR(bt_conn_get_dst(conn), addr);
+	LOG_WRN("Pairing cancelled: %s", addr);
+}
+
+static void passkey_entry(struct bt_conn *conn)
+{
+     GET_BT_ADDR_STR(bt_conn_get_dst(conn), addr);
+	LOG_INF("Passkey entry request: %s", addr);
+     
+     #ifdef BLE_CONF_ROLE_CENTRAL
+     int err;
+     err = bt_conn_auth_passkey_entry(conn, BLE_CONF_PASSKEY);
+     IF_BLE_ERROR(err, "Passkey entry failed (Error: %d)")
+     #endif//BLE_CONF_ROLE_CENTRAL
+}
+
+static void pairing_confirm(struct bt_conn *conn)
+{
+     GET_BT_ADDR_STR(bt_conn_get_dst(conn), addr);
+	LOG_INF("pairing confirm request: %s", addr);
+     
+     #ifdef BLE_CONF_ROLE_PERIPHERAL 
+     int err;
+     if(bt_addr_le_eq(bt_conn_get_dst(conn),bt_conn_get_dst(central_conn)))
+     {
+          err = bt_conn_auth_pairing_confirm(central_conn);
+          IF_BLE_ERROR(err, "pairing confirm failed (Error: %d)",return)
+          LOG_INF("pairing confirmation request accepted");
+     }
+     else LOG_WRN("Pairing confirmation request denied");
+     #endif//BLE_CONF_ROLE_PERIPHERAL
+}
+
+static struct bt_conn_auth_cb conn_auth_cb = {
+	.cancel             = auth_cancel,
+     .passkey_entry      = passkey_entry,    
+     .pairing_confirm    = pairing_confirm,
+};
+
+static void pairing_complete(struct bt_conn *conn, bool bonded)
+{
+	GET_BT_ADDR_STR(bt_conn_get_dst(conn), addr);
+	LOG_INF("Pairing completed: %s, bonded: %d", addr, bonded);
+}
+
+static void pairing_failed(struct bt_conn *conn, enum bt_security_err reason)
+{
+	GET_BT_ADDR_STR(bt_conn_get_dst(conn), addr);
+	LOG_WRN("Pairing failed conn: %s, reason %d", addr, reason);
+}
+
+static struct bt_conn_auth_info_cb conn_auth_info_cb = {
+	.pairing_complete = pairing_complete,
+	.pairing_failed = pairing_failed
 };
 
 
@@ -362,6 +419,13 @@ void BLE_manager()
      switch (manager_state)
      {
           case BLE_INIT:
+
+               err = bt_conn_auth_cb_register(&conn_auth_cb);
+               IF_BLE_ERROR(err, "Auth cb register failed (err %d)", flag_ble_error=true; return);
+
+               err = bt_conn_auth_info_cb_register(&conn_auth_info_cb);
+               IF_BLE_ERROR(err, "Auth info cb register failed (err %d)", flag_ble_error=true; return);
+
                err = bt_enable(NULL);
                IF_BLE_ERROR(err, "Bluetooth init failed (err %d)", flag_ble_error=true; return);
 

@@ -14,7 +14,7 @@ LOG_MODULE_REGISTER(LOG_MAIN,LOG_MAIN_LEVEL);                         // Registr
 
 int main(void)
 {
-     LOG_INF("\r\n\n\n\n---------- APP DMQ WIRELESS STARTING ----------\n\n");
+     LOG_INF("\n\n\n\n\n\n\n\n\n\n\n\n---------- APP DMQ WIRELESS STARTING ----------\n");
 
      for(;;)
      {
