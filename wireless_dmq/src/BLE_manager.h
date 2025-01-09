@@ -111,13 +111,11 @@
  * @param ... Acciones opcionales a ejecutar en caso de error. Puede ser una única acción (por ejemplo, `return err`) 
  *            o varias separadas por punto y coma (`action1; action2`).
  */
-#define IF_BLE_ERROR(err, text, ...)                                  \
-     do {                                                             \
-          if (err) {                                                  \
-               LOG_ERR(text, err);                                    \
-               do{__VA_ARGS__;} while (0);                            \
-          }                                                           \
-     } while (0);
+#define IF_BLE_ERROR(err, text, ...)                             \
+     if (err) {                                                  \
+          LOG_ERR(text, err);                                    \
+          do{__VA_ARGS__;} while (0);                            \
+     }
 
 /*
  * Maneja acciones exitosas BLE con mensajes de log y acciones específicas.
@@ -131,13 +129,18 @@
  * @param ... Acciones opcionales a ejecutar en caso de error. Puede ser una única acción (por ejemplo, `return err`) 
  *            o varias separadas por punto y coma (`action1; action2`).
  */
-#define IF_BLE_NO_ERROR(err, text, ...)                               \
-     do {                                                             \
-          if (!err) {                                                 \
-               LOG_INF(text);                                         \
-               do{__VA_ARGS__;} while (0);                            \
-          }                                                           \
-     } while (0);
+#define IF_BLE_NO_ERROR(err, text, ...)                          \
+     if (!err){                                                  \
+          LOG_INF(text);                                         \
+          do{__VA_ARGS__;} while (0);                            \
+     }
+
+#define IF_BLE_IS_ERROR(err, errcomp, text, ...)                 \
+     if (err = errcomp) {                                        \
+          LOG_INF(text);                                         \
+          do{__VA_ARGS__;} while (0);                            \
+     }
+
 
 enum BLE_manager_state
 {

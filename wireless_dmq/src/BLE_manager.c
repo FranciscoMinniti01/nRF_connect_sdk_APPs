@@ -67,8 +67,14 @@ static void scan_filter_match( struct bt_scan_device_info *device_info, struct b
 
 static void scan_connecting_error(struct bt_scan_device_info *device_info)
 {
+     int err;
+
 	GET_BT_ADDR_STR(device_info->recv_info->addr, addr);
 	LOG_WRN("Scan connecting failed. Address: %s", addr);
+
+     err = bt_scan_start(BT_SCAN_TYPE_SCAN_ACTIVE);
+     IF_BLE_ERROR(err, "Scanning failed to start (err %d)", flag_ble_error=true)
+     if(!err) LOG_INF("Scanning start");
 }
 
 static void scan_connecting(struct bt_scan_device_info *device_info, struct bt_conn *conn)
@@ -193,10 +199,10 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
           central_conn = bt_conn_ref(conn);
 
           err = bt_passkey_set(BLE_CONF_PASSKEY);
-          IF_BLE_ERROR(err, "Set passkey failed (Error: %d)") 
+          IF_BLE_ERROR(err, "Set passkey failed (Error: %d)")
 
-          /*err = bt_conn_set_security(conn, BLE_CONF_SECURITY_LEVEL);
-          IF_BLE_ERROR(err, "Failed to set security level (Error: %d)")*/
+          err = bt_conn_set_security(conn, BLE_CONF_SECURITY_LEVEL);
+          IF_BLE_ERROR(err, "Failed to set security level (Error: %d)")
 
           /*err = bt_le_adv_stop();
           if(err == -EALREADY) LOG_WRN("Advertising was already stopped");
@@ -358,7 +364,7 @@ static void auth_cancel(struct bt_conn *conn)
 	LOG_WRN("Pairing cancelled: %s", addr);
 }
 
-static void passkey_entry(struct bt_conn *conn)
+/*static void passkey_entry(struct bt_conn *conn)
 {
      GET_BT_ADDR_STR(bt_conn_get_dst(conn), addr);
 	LOG_INF("Passkey entry request: %s", addr);
@@ -385,12 +391,27 @@ static void pairing_confirm(struct bt_conn *conn)
      }
      else LOG_WRN("Pairing confirmation request denied");
      #endif//BLE_CONF_ROLE_PERIPHERAL
+}*/
+
+static void auth_passkey_display(struct bt_conn *conn, unsigned int passkey)
+{
+	GET_BT_ADDR_STR(bt_conn_get_dst(conn), addr);
+	printk("Passkey for %s: %06u\n", addr, passkey);
+}
+
+static void auth_passkey_confirm(struct bt_conn *conn, unsigned int passkey)
+{
+     GET_BT_ADDR_STR(bt_conn_get_dst(conn), addr);
+	printk("Passkey confirm for %s: %06u\n", addr, passkey);
+     //bt_conn_auth_passkey_confirm(conn);
 }
 
 static struct bt_conn_auth_cb conn_auth_cb = {
 	.cancel             = auth_cancel,
-     .passkey_entry      = passkey_entry,    
-     .pairing_confirm    = pairing_confirm,
+     .passkey_display = auth_passkey_display,
+	.passkey_confirm = auth_passkey_confirm,
+     /*.passkey_entry      = passkey_entry,    
+     .pairing_confirm    = pairing_confirm,*/
 };
 
 static void pairing_complete(struct bt_conn *conn, bool bonded)
