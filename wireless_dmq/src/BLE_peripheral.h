@@ -1,13 +1,8 @@
-#ifndef BLE_MANAGER_H
-#define BLE_MANAGER_H
 
-// BUILT CONFIGURATION ------------------------------------------------------------------------------------------------------------------------------------------------------
+#ifdef CONF_BT_PERIPHERAL
 
-//#define BLE_CONF_ROLE_CENTRAL                                         // Habilita el funcionamiento del dispositivo como central
-#define BLE_CONF_ROLE_PERIPHERAL                                      // Habilita el funcionamiento del dispositivo como periferico
-
-#define BLE_CONF_ENABLE_CONN_PARAM                                    // Habilita la configuracion de los parametros de coneccion por parte del periferico
-
+#ifndef BLE_PERIPHERAL_H
+#define BLE_PERIPHERAL_H
 
 // INCLUDES ------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -20,52 +15,27 @@
 #include <zephyr/bluetooth/conn.h>                                    // Proporciona las APIs para administrar las conecciones
 #include <zephyr/bluetooth/gatt.h>                                    // Proporciona las APIs para administrar servicios y características GATT y sus parametros
 
-#ifdef BLE_CONF_ROLE_CENTRAL
-#include <bluetooth/scan.h>                                           // Proporciona las APIs para administrar el escaneo BLE como central
-#endif//BLE_CONF_ROLE_CENTRAL
-
-#ifdef BLE_CONF_ROLE_PERIPHERAL
-#include <zephyr/bluetooth/gap.h>                                     // Proporciona las APIs y estructuras relacionadas con GAP, como publicidad y conexiones  
-#endif//BLE_CONF_ROLE_PERIPHERAL
+#include <zephyr/bluetooth/gap.h>                                     // Proporciona las APIs y estructuras relacionadas con GAP, como publicidad y conexiones
 
 
 // CONFIGURATION ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-#define BLE_CONF_LOG_LEVEL    4                                                 // Nivel del LOG
-
-#define BT_UUID_NUS_VAL 		BT_UUID_128_ENCODE(0x6e400001, 0xb5a3, 0xf393, 0xe0a9, 0xe50e24dcca9e)     // FRAN: TEMPORAL
-#define BT_UUID_NUS_SERVICE   BT_UUID_DECLARE_128(BT_UUID_NUS_VAL)                                       // FRAN: TEMPORAL
+#define BLE_CONF_LOG_LEVEL              4                                        // Nivel del LOG
+#define BLE_CONF_DEVICE_NAME            CONFIG_BT_DEVICE_NAME                    // Configuracion del nombre del dispositivo en la publicidad
 
 // ADVERTISING --------------------------------------------------
-#ifdef BLE_CONF_ROLE_PERIPHERAL
-
 #define BLE_CONF_ADV_OPTIONS           BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_ONE_TIME      //Configuracion de la publicidad
 #define BLE_CONF_ADV_MIN_INTERVAL      BT_GAP_ADV_FAST_INT_MIN_2                // Configuracion del minimo intervalo de publicidad
 #define BLE_CONF_ADV_MAX_INTERVAL      BT_GAP_ADV_FAST_INT_MAX_2                // Configuracion del maximo intervalo de publicidad
 #define BLE_CONF_ADV_ADDR_DIREC        NULL                                     // Configuracion la publicidad dirigida (NULL para desactivar)
 #define BLE_CONF_ADV_FLAGS             BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR     // Configuracion de las banderas de la publicidad
-#define BLE_CONF_DEVICE_NAME           CONFIG_BT_DEVICE_NAME                    // Configuracion del nombre del dispositivo en la publicidad
 #define BLE_CONF_ADV_UUID_SERVICE      BT_UUID_NUS_VAL                          // Configuracion del UUID para notificar el servicio utilizado
 
-#endif//BLE_CONF_ROLE_PERIPHERAL
-
-// SCAN --------------------------------------------------
-#ifdef BLE_CONF_ROLE_CENTRAL
-
-#define BLE_CONF_SCAN_OPTIONS           BT_LE_SCAN_OPT_FILTER_DUPLICATE         // Configuracion del escaneo
-#define BLE_CONF_SCAN_INTERVAL          0x0060                                  // Configuacion del intervalo de escaneo
-#define BLE_CONF_SCAN_WINDOWS           0x0050                                  // Configuracion de la ventana de escaneo
-#define BLE_CONF_SCAN_UUID_FILTER       BT_UUID_NUS_SERVICE                     // Configuracion del UUID utilizado en el filtro de escaneo
-#define BLE_CONF_SCAN_CONN_AT_MATCH     true                                    // Determina si inicia una coneccion al encontrar un dispositivo o no
-#define BLE_CONF_SCAN_ACTIVE_FILTER     BT_SCAN_ALL_FILTER                      // Configuracion para activar ciertos filtros o todos a la vez
-#define BLE_CONF_SCAN_TYPE_MATCH        true                                    // Determina si tienen que coinicidir todos los filtros activos o si basta con uno
-
-#endif//BLE_CONF_ROLE_CENTRAL
-
+// FRAN TEMPORAL --------------------------------------------------
+#define BT_UUID_NUS_VAL 		BT_UUID_128_ENCODE(0x6e400001, 0xb5a3, 0xf393, 0xe0a9, 0xe50e24dcca9e)
+#define BT_UUID_NUS_SERVICE   BT_UUID_DECLARE_128(BT_UUID_NUS_VAL)
 
 // CONNECTION --------------------------------------------------
-#define BLE_CONF_SECURITY_LEVEL         BT_SECURITY_L3                          // Determina el nivel de seguridad que se va a solicitar como central a un periferico que se conecte
-
 #ifdef BLE_CONF_ENABLE_CONN_PARAM
 #define BLE_CONF_CONN_MIN_INTERVAL      30                                      // Configuracion de intervalo minimo de coneccion que como periferico se solicita a una central
 #define BLE_CONF_CONN_MAX_INTERVAL      50                                      // Configuracion de intervalo maximo de coneccion que como periferico se solicita a una central
@@ -80,7 +50,8 @@
 #endif//BLE_CONF_ENABLE_CONN_PARAM
 
 // SECURITY --------------------------------------------------
-#define BLE_CONF_PASSKEY      123456
+#define BLE_CONF_SECURITY_LEVEL         BT_SECURITY_L3                          // Determina el nivel de seguridad que se va a solicitar como central a un periferico que se conecte
+#define BLE_CONF_PASSKEY                123456
 
 
 // MACROS - STRUCTURES - ENUM ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -95,8 +66,8 @@
  * @param origin Dirección Bluetooth de tipo `bt_addr_le_t` que será convertida.
  * @param addr Nombre del buffer donde se almacenará la cadena resultante. La macro lo define internamente.
  */
-#define GET_BT_ADDR_STR(origin, addr)                                 \
-     char addr[BT_ADDR_LE_STR_LEN];                                   \
+#define GET_BT_ADDR_STR(origin, addr)                            \
+     char addr[BT_ADDR_LE_STR_LEN];                              \
      bt_addr_le_to_str(origin, addr, sizeof(addr));
 
 /*
@@ -130,13 +101,13 @@
  *            o varias separadas por punto y coma (`action1; action2`).
  */
 #define IF_BLE_NO_ERROR(err, text, ...)                          \
-     if (!err){                                                  \
+     if (err == 0){                                              \
           LOG_INF(text);                                         \
           do{__VA_ARGS__;} while (0);                            \
      }
 
 #define IF_BLE_IS_ERROR(err, errcomp, text, ...)                 \
-     if (err = errcomp) {                                        \
+     if (err == errcomp) {                                        \
           LOG_INF(text);                                         \
           do{__VA_ARGS__;} while (0);                            \
      }
@@ -156,4 +127,6 @@ void BLE_manager();
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-#endif//BLE_MANAGER_H
+#endif//BLE_PERIPHERAL_H
+
+#endif//CONF_BT_PERIPHERAL

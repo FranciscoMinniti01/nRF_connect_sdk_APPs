@@ -19,8 +19,11 @@
                "bt_rpc_gatt_client.h": "c",
                "bt_rpc_conn_client.h": "c",
                "gatt.h": "c",
-               "gatt_dm.h": "c"
+               "gatt_dm.h": "c",
+               "ble_peripheral.h": "c",
+               "ble_central.h": "c"
           },
-          "nrf-connect.applications": []
+          "nrf-connect.applications": [],
+          "C_Cpp.dimInactiveRegions": false
      }
 }

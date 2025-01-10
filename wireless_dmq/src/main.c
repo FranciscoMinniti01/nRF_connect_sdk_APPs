@@ -1,9 +1,12 @@
+
+#ifdef CONF_BT_PERIPHERAL
+
 // INCLUDES ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 #include <zephyr/kernel.h>                                            // Proporciona APIs para los thread, timers, sincronización y otras funciones del sistema operativo Zephyr
 #include <zephyr/logging/log.h>                                       // Incluye las funciones y macros del modulo LOG
 
-#include "BLE_manager.h"                                                   
+#include "BLE_peripheral.h"                                                 
 
 // DEFINES ------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -23,3 +26,8 @@ int main(void)
      }
      return 0;
 }
+
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#endif//CONF_BT_PERIPHERAL
