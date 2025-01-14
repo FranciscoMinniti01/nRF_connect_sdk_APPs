@@ -21,7 +21,8 @@
                "gatt.h": "c",
                "gatt_dm.h": "c",
                "ble_peripheral.h": "c",
-               "ble_central.h": "c"
+               "ble_central.h": "c",
+               "ble_central_peripheral.h": "c"
           },
           "nrf-connect.applications": [],
           "C_Cpp.dimInactiveRegions": false

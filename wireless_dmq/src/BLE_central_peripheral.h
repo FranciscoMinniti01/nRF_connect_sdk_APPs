@@ -1,7 +1,7 @@
-#ifdef CONF_BT_CENTRAL
+#ifdef CONF_BT_CENTRAL_PERIPHERAL
 
-#ifndef BLE_CENTRAL_H
-#define BLE_CENTRAL_H
+#ifndef BLE_CENTRAL_PERIPHERAL_H
+#define BLE_CENTRAL_PERIPHERAL_H
 
 // INCLUDES ---------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -105,9 +105,11 @@ enum BLE_manager_state
 
 // FUNCTIONS DECLARATION --------------------------------------------------------------------------------------------------------------------------------
 
+void BLE_manager();
+
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // --------------------------------------------------
 
-#endif//BLE_CENTRAL_H
+#endif//BLE_PERIPHERAL_PERIPHERAL_H
 
-#endif//CONF_BT_CENTRAL
+#endif//CONF_BT_CENTRAL_PERIPHERAL

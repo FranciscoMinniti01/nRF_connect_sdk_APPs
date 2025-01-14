@@ -8,17 +8,18 @@
 
 // VARIABLES --------------------------------------------------------------------------------------------------------------------------------------------
 
-LOG_MODULE_REGISTER(LOG_BLE_PERIPHERAL,BLE_CONF_LOG_LEVEL);                     // Registro del modulo LOG y configuracion del nivel
-static uint8_t manager_state  = BLE_INIT;                                       // Estado del administrador del BLE
-static bool flag_ble_error    = false;                                          // Bandera global para indicar la precencia de error, en true se reinicia BLE
-
-static struct bt_conn *central_conn;                                            // Instancia de la conneccion como periferico a un central 
+LOG_MODULE_REGISTER(LOG_BLE_PERIPHERAL,BLE_CONF_LOG_LEVEL);
+static uint8_t manager_state  = BLE_INIT;
+static bool flag_ble_error    = false;
+static struct bt_conn *central_conn;
 
 // FRAN TEMPORAL
-static uint8_t adv_sensor_id[3] = {0x12,0x34,0x56};
+static uint8_t manufacture_dat[3] = {0x12,0x34,0x56};
 
 
 // ADVERTISING ------------------------------------------------------------------------------------------------------------------------------------------
+
+bool update_manufacture_data(const uint8_t * data,  ) 
 
 static const struct bt_data ad[] = {
      BT_DATA_BYTES( BT_DATA_FLAGS, BLE_CONF_ADV_FLAGS),
