@@ -23,6 +23,9 @@
 
 #define BLE_CONF_LOG_LEVEL 4
 
+#define BLE_CONF_ENABLE_MTU_EXCHANGE
+#define BLE_CONF_ENABLE_LOG_CONN_PARAM
+
 // FRAN TEMPORAL --------------------------------------------------
 #define BT_UUID_NUS_VAL 		BT_UUID_128_ENCODE(0x6e400001, 0xb5a3, 0xf393, 0xe0a9, 0xe50e24dcca9e)
 #define BT_UUID_NUS_SERVICE   BT_UUID_DECLARE_128(BT_UUID_NUS_VAL)
@@ -35,6 +38,7 @@
 #define BLE_CONF_SCAN_CONN_AT_MATCH     true                                    // Determina si inicia una coneccion al encontrar un dispositivo o no
 #define BLE_CONF_SCAN_ACTIVE_FILTER     BT_SCAN_ALL_FILTER                      // Configuracion para activar ciertos filtros o todos a la vez
 #define BLE_CONF_SCAN_TYPE_MATCH        true                                    // Determina si tienen que coinicidir todos los filtros activos o si basta con uno
+#define MAX_LEN_MANUFACTURER_DATA       5                                        // Largo maximo en bytes de la manufacture data
 
 #define BLE_CONF_PASSKEY                123456
 
@@ -53,6 +57,31 @@
 #define GET_BT_ADDR_STR(origin, addr)                            \
      char addr[BT_ADDR_LE_STR_LEN];                              \
      bt_addr_le_to_str(origin, addr, sizeof(addr));
+
+
+#define IF_BLE_IS_ERROR(err, errcomp, text, ...)                 \
+     if (err == errcomp) {                                        \
+          LOG_INF(text);                                         \
+          do{__VA_ARGS__;} while (0);                            \
+     }
+
+/*
+ * Maneja errores BLE con mensajes de log y acciones específicas.
+ *
+ * Esta macro verifica si se produjo un error (err ≠ 0). Si ocurre un error:
+ * - Registra un mensaje de error en el log especificado por `text`.
+ * - Ejecuta una o más acciones definidas en `__VA_ARGS__`.
+ *
+ * @param err Código de error a evaluar.
+ * @param text Mensaje de error que se registrará en el log (debe incluir un marcador %d para mostrar el valor de `err`).
+ * @param ... Acciones opcionales a ejecutar en caso de error. Puede ser una única acción (por ejemplo, `return err`) 
+ *            o varias separadas por punto y coma (`action1; action2`).
+ */
+#define ELSE_IF_BLE_ERROR(err, text, ...)                             \
+     else if (err) {                                                  \
+          LOG_ERR(text, err);                                    \
+          do{__VA_ARGS__;} while (0);                            \
+     }
 
 /*
  * Maneja errores BLE con mensajes de log y acciones específicas.
@@ -90,8 +119,20 @@
           do{__VA_ARGS__;} while (0);                            \
      }
 
-#define IF_BLE_IS_ERROR(err, errcomp, text, ...)                 \
-     if (err == errcomp) {                                        \
+/*
+ * Maneja acciones exitosas BLE con mensajes de log y acciones específicas.
+ *
+ * Esta macro verifica si no se produjo un error (err = 0). Si no ocurre un error:
+ * - Registra un mensaje de informacion en el log, especificado por `text`.
+ * - Ejecuta una o más acciones definidas en `__VA_ARGS__`.
+ *
+ * @param err Código de error a evaluar.
+ * @param text Mensaje que se registrará en el log.
+ * @param ... Acciones opcionales a ejecutar en caso de error. Puede ser una única acción (por ejemplo, `return err`) 
+ *            o varias separadas por punto y coma (`action1; action2`).
+ */
+#define ELSE_BLE_NO_ERROR(err, text, ...)                        \
+     else(err == 0){                                             \
           LOG_INF(text);                                         \
           do{__VA_ARGS__;} while (0);                            \
      }
@@ -104,6 +145,9 @@ enum BLE_manager_state
 };
 
 // FUNCTIONS DECLARATION --------------------------------------------------------------------------------------------------------------------------------
+
+void BLE_manager();
+bool update_scan_manufacturer_data(uint8_t* data, uint8_t data_len);
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 // --------------------------------------------------

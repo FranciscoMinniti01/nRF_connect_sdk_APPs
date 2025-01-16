@@ -18,10 +18,18 @@ LOG_MODULE_REGISTER(LOG_MAIN,LOG_MAIN_LEVEL);                         // Registr
 int main(void)
 {
      LOG_INF("\n\n\n\n\n\n\n\n\n\n\n\n---------- APP DMQ WIRELESS STARTING ----------\n");
+     
+     uint8_t sensor_id[3] = {0x12,0x34,0x56};
+     update_adv_manufacturer_data(sensor_id, sizeof(sensor_id));
 
      for(;;)
      {
           BLE_manager();
+          
+          static bool flag = false;
+          static uint8_t sensor_id[3] = {0x12,0x34,0x56};
+          if(!flag) flag = update_adv_manufacturer_data(sensor_id, sizeof(sensor_id));
+
           k_sleep(K_MSEC(1));                                         
      }
      return 0;
@@ -56,6 +64,11 @@ int main(void)
      for(;;)
      {
           BLE_manager();
+
+          static bool flag = false;
+          static uint8_t sensor_id[3] = {0x12,0x34,0x56};
+          if(!flag) flag = update_scan_manufacturer_data(sensor_id, sizeof(sensor_id));
+
           k_sleep(K_MSEC(1));                                         
      }
      return 0;
